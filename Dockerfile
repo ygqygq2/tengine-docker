@@ -9,8 +9,11 @@ ENV TENGINE_VERSION="2.3.2" \
 #get all the dependences and nginx
 RUN yum install -y git gcc make wget pcre pcre-devel openssl openssl-devel \
   && rm -rf /var/cache/yum/* \
+  && groupadd -g 1001 www \
+  && useradd -u 1001 -g www -s /sbin/nologin www \
   && mkdir -p ${TENGINE_BASEDIR}/tmp \
-  && mkdir -p ${TENGINE_BASEDIR}/conf/vhost
+  && mkdir -p ${TENGINE_BASEDIR}/conf/vhost \
+  && chown www ${TENGINE_BASEDIR}/tmp
 
 WORKDIR /tmp
 
@@ -19,12 +22,13 @@ WORKDIR /tmp
 RUN wget http://tengine.taobao.org/download/tengine-${TENGINE_VERSION}.tar.gz \
   && tar -zxf tengine-${TENGINE_VERSION}.tar.gz \
   && cd tengine-${TENGINE_VERSION} \
-  && ./configure --prefix=${TENGINE_BASEDIR} \
+  && ./configure --prefix=${TENGINE_BASEDIR} --user=www --group=www \
   && make \
   && make install \
   && ln -s ${TENGINE_BASEDIR}/sbin/nginx /usr/bin/ \
   && ln -sf /dev/stdout ${TENGINE_BASEDIR}/logs/access.log \
   && ln -sf /dev/stderr ${TENGINE_BASEDIR}/logs/error.log \
+  && chown www -R ${TENGINE_BASEDIR}/html \
   && rm -rf tengine-${TENGINE_VERSION} tengine-${TENGINE_VERSION}.tar.gz
 
 
@@ -34,4 +38,4 @@ COPY nginx.conf ${TENGINE_BASEDIR}/conf/
 
 WORKDIR ${TENGINE_BASEDIR}/conf
 
-ENTRYPOINT ["nginx", "-g", "daemon off;"]
+CMD ["nginx", "-g", "daemon off;"]
